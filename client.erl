@@ -28,22 +28,24 @@ initial_state(Nick, GUIAtom, ServerAtom) ->
 
 % Join channel
 handle(St, {join, Channel}) ->
-    % TODO: Implement this function
-    server:start(Channel),
-    % {reply, ok, St} ;
-    {reply, {error, not_implemented, "join not implemented"}, St} ;
+  %case genserver:request(St#client_st.server, {join, Channel, self()}) of
+    {reply, ok, St} ;
+   % user_already_joined -> {reply, {error, user_already_joined, "user_already_joined"}, St}
+  %end;
+
+
 
 % Leave channel
 handle(St, {leave, Channel}) ->
     % TODO: Implement this function
-    % {reply, ok, St} ;
-    {reply, {error, not_implemented, "leave not implemented"}, St} ;
+    {reply, ok, St} ;
+    %{reply, {error, not_implemented, "leave not implemented"}, St} ;
 
 % Sending message (from GUI, to channel)
 handle(St, {message_send, Channel, Msg}) ->
     % TODO: Implement this function
-    % {reply, ok, St} ;
-    {reply, {error, not_implemented, "message sending not implemented"}, St} ;
+    {reply, ok, St} ;
+    %{reply, {error, not_implemented, "message sending not implemented"}, St} ;
 
 % ---------------------------------------------------------------------------
 % The cases below do not need to be changed...
