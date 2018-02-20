@@ -45,10 +45,19 @@ handler(Whatever, _) ->
 
 channel_handler(State, {join, Client}) ->
   Reply = lists:member(Client, State#channel_st.users),
-  if
-    Reply =:= true -> {reply, user_already_joined, State};
+  if Reply =:= true -> {reply, user_already_joined, State};
     true -> NewState = State#channel_st{users = State#channel_st.users ++ [Client]},
       {reply, ok, NewState}
+  end;
+
+channel_handler(State, {message_send, Msg, Client, Nick}) ->
+  Reply = lists:member(Client, State#channel_st.users),
+  if Reply =:= true ->
+      lists:foreach(fun(Pid) ->
+        spawn(fun() -> genserver:request(Pid, {message_receive, State#channel_st.channel, Nick, Msg}) end) end,
+        lists:delete(Client, State#channel_st.users)),
+        {reply, ok, State};
+    true -> {reply, user_not_joined, State}
   end.
 
 

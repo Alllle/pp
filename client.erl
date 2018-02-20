@@ -40,7 +40,7 @@ handle(St, {join, Channel}) ->
 
 % Leave channel
 handle(St, {leave, Channel}) ->
-  case St#client.server of
+  case St#client_st.server of
     undefined ->
       {reply, {error, server_not_reached, "server_not_reached"}, St};
     _ ->
@@ -53,12 +53,12 @@ handle(St, {leave, Channel}) ->
 % Sending message (from GUI, to channel)
 handle(St, {message_send, Channel, Msg}) ->
     case St#client_st.server of
-      undefined -> {reply, {error, not_implemented, "message sending not implemented"}, St} ;
+      undefined -> {reply, {error, server_not_reached, "server_not_reached"}, St} ;
       _ ->
         Temp = list_to_atom(Channel),
         case genserver:request(Temp, {message_send, Msg, self(), St#client_st.nick}) of
           ok -> {reply, ok, St} ;
-          _ -> {reply, {error, user_not_joined, ""}, St}
+          _ -> {reply, {error, user_not_joined, "user_not_joined"}, St}
         end
     end;
 
