@@ -28,18 +28,27 @@ initial_state(Nick, GUIAtom, ServerAtom) ->
 
 % Join channel
 handle(St, {join, Channel}) ->
+  case St#client_st.server of
+    undefined ->
+      {reply, {error, server_not_reached, "server_not_reached"}, St};
+    _ ->
     case genserver:request(St#client_st.server, {join, Channel, self()}) of
       ok -> {reply, ok, St} ;
       user_already_joined -> {reply, {error, user_already_joined, "user_already_joined"}, St}
-    end;
-
-
+    end
+  end;
 
 % Leave channel
 handle(St, {leave, Channel}) ->
-    % TODO: Implement this function
-    {reply, ok, St} ;
-    %{reply, {error, not_implemented, "leave not implemented"}, St} ;
+  case St#client.server of
+    undefined ->
+      {reply, {error, server_not_reached, "server_not_reached"}, St};
+    _ ->
+    case genserver:request(St#client_st.server, {leave, Channel, self()}) of
+      ok -> {reply, ok, St};
+      user_already_joined -> {reply, {error, user_not_joined, "user_not_joined"}, St}
+    end
+  end;
 
 % Sending message (from GUI, to channel)
 handle(St, {message_send, Channel, Msg}) ->
