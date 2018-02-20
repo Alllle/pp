@@ -52,9 +52,15 @@ handle(St, {leave, Channel}) ->
 
 % Sending message (from GUI, to channel)
 handle(St, {message_send, Channel, Msg}) ->
-    % TODO: Implement this function
-    {reply, ok, St} ;
-    %{reply, {error, not_implemented, "message sending not implemented"}, St} ;
+    case St#client_st.server of
+      undefined -> {reply, {error, not_implemented, "message sending not implemented"}, St} ;
+      _ ->
+        Temp = list_to_atom(Channel),
+        case genserver:request(Temp, {message_send, Msg, self(), St#client_st.nick}) of
+          ok -> {reply, ok, St} ;
+          _ -> {reply, {error, user_not_joined, ""}, St}
+        end
+    end;
 
 % ---------------------------------------------------------------------------
 % The cases below do not need to be changed...
