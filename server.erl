@@ -29,12 +29,14 @@ start(ServerAtom) ->
     PID.
 
 handler(State, {join, Channel, Client}) ->
-  Condition = not list:member(Channel, State#server_st.channels),
+  Temp = list_to_atom(Channel),
+  Condition = not lists:member(Temp, State#server_st.channels),
   if Condition ->
-    genserver:start(Channel, initial_channel_state(Channel)), fun channel_handler/2,
-    NewState = State#server_st{channels = State#server_st.channels ++ [Channel]}
+    genserver:start(Temp, initial_channel_state(Temp), fun channel_handler/2),
+    NewState = State#server_st{channels = State#server_st.channels ++ [Temp]};
+    true -> NewState = State
   end,
-  case genserver:request(Channel, {join, Client}) of
+  case genserver:request(Temp, {join, Client}) of
     ok -> {reply, ok, NewState};
     user_already_joined -> {reply, user_already_joined, NewState}
   end;
@@ -55,6 +57,5 @@ channel_handler(State, {join, Client}) ->
 % Stop the server process registered to the given name,
 % together with any other associated processes
 stop(ServerAtom) ->
-    % TODO Implement function
-    % Return ok
-    not_implemented.
+  genserver:stop(ServerAtom),
+  ok.

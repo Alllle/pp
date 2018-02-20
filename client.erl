@@ -28,10 +28,10 @@ initial_state(Nick, GUIAtom, ServerAtom) ->
 
 % Join channel
 handle(St, {join, Channel}) ->
-  %case genserver:request(St#client_st.server, {join, Channel, self()}) of
-    {reply, ok, St} ;
-   % user_already_joined -> {reply, {error, user_already_joined, "user_already_joined"}, St}
-  %end;
+    case genserver:request(St#client_st.server, {join, Channel, self()}) of
+      ok -> {reply, ok, St} ;
+      user_already_joined -> {reply, {error, user_already_joined, "user_already_joined"}, St}
+    end;
 
 
 
