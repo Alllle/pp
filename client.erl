@@ -28,10 +28,10 @@ initial_state(Nick, GUIAtom, ServerAtom) ->
 
 % Join channel
 handle(St, {join, Channel}) ->
-  case St#client_st.server of
-    undefined ->
-      {reply, {error, server_not_reached, "server_not_reached"}, St};
-    _ ->
+  %Checks if the server is running (this is done in all handlers here)
+  case lists:member(St#client_st.server, registered()) of
+    false -> {reply, {error, server_not_reached, "server_not_reached"}, St};
+    true ->
       case genserver:request(St#client_st.server, {join, Channel, self()}) of
         ok -> {reply, ok, St};
         user_already_joined -> {reply, {error, user_already_joined, "user_already_joined"}, St}
@@ -41,12 +41,11 @@ handle(St, {join, Channel}) ->
 % Leave channel
 handle(St, {leave, Channel}) ->
   case St#client_st.server of
-    undefined ->
-      {reply, {error, server_not_reached, "server_not_reached"}, St};
+    undefined -> {reply, {error, server_not_reached, "server_not_reached"}, St};
     _ ->
       case genserver:request(list_to_atom(Channel), {leave, self()}) of
         ok -> {reply, ok, St};
-        user_already_joined -> {reply, {error, user_not_joined, "user_not_joined"}, St}
+        user_not_joined -> {reply, {error, user_not_joined, "user_not_joined"}, St}
       end
   end;
 
@@ -55,7 +54,7 @@ handle(St, {message_send, Channel, Msg}) ->
   case St#client_st.server of
     undefined -> {reply, {error, server_not_reached, "server_not_reached"}, St};
     _ ->
-      case genserver:request(Channel, {message_send, Msg, self(), St#client_st.nick}) of
+      case genserver:request(list_to_atom(Channel), {message_send, Msg, self(), St#client_st.nick}) of
         ok -> {reply, ok, St};
         _ -> {reply, {error, user_not_joined, "user_not_joined"}, St}
       end

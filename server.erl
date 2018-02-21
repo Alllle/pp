@@ -6,7 +6,7 @@
   channels % all the channels
 }).
 -record(channel_st, {
-  channel, % atom of the server
+  channel, % atom of the channel
   users % nick/username of all the users of this channel
 }).
 
@@ -29,38 +29,40 @@ start(ServerAtom) ->
   PID.
 
 handler(State, {join, Channel, Client}) ->
-  Temp = list_to_atom(Channel),
-  Condition = not lists:member(Temp, State#server_st.channels),
+  ChannelAtom = list_to_atom(Channel),
+  Condition = not lists:member(ChannelAtom, State#server_st.channels), %checks if the channel exists
   if Condition ->
-    genserver:start(Temp, initial_channel_state(Temp), fun channel_handler/2),
-    NewState = State#server_st{channels = State#server_st.channels ++ [Temp]};
+    genserver:start(ChannelAtom, initial_channel_state(ChannelAtom), fun channel_handler/2),
+    NewState = State#server_st{channels = [ChannelAtom | State#server_st.channels]};
     true -> NewState = State
   end,
-  case genserver:request(Temp, {join, Client}) of
+  case genserver:request(ChannelAtom, {join, Client}) of
     ok -> {reply, ok, NewState};
     user_already_joined -> {reply, user_already_joined, NewState}
   end.
 
 channel_handler(State, {join, Client}) ->
-  Condition = lists:member(Client, State#channel_st.users),
+  Condition = lists:member(Client, State#channel_st.users), %Checks if the client is in the channel
   if Condition -> {reply, user_already_joined, State};
-    true -> NewState = State#channel_st{users = State#channel_st.users ++ [Client]},
+    true -> NewState = State#channel_st{users = [Client | State#channel_st.users]},
       {reply, ok, NewState}
   end;
 
 channel_handler(State, {leave, Client}) ->
   Condition = not lists:member(Client, State#channel_st.users),
   if Condition -> {reply, user_not_joined, State};
-    true -> NewState = State#channel_st{users = State#channel_st.users -- [Client]},
+    true -> NewState = State#channel_st{users = lists:delete(Client, State#channel_st.users)},
       {reply, ok, NewState}
   end;
 
 
 channel_handler(State, {message_send, Msg, Client, Nick}) ->
-  Condition = lists:member(Client, State#channel_st.users),
+  Condition = lists:member(Client, State#channel_st.users), %Checks if client is in the channel
   if Condition ->
+    %For each client in channel_st.users, spawn a process that sends the message using genserver
+    %Here is where we use concurrency
     lists:foreach(fun(Pid) ->
-      spawn(fun() -> genserver:request(Pid, {message_receive, State#channel_st.channel, Nick, Msg}) end) end,
+      spawn(fun() -> genserver:request(Pid, {message_receive, atom_to_list(State#channel_st.channel), Nick, Msg}) end) end,
       lists:delete(Client, State#channel_st.users)),
     {reply, ok, State};
     true -> {reply, user_not_joined, State}
